@@ -56,7 +56,7 @@ po::variables_map initCommandLine(int argc, const char* argv[])
         po::value<vector<string>>()->multitoken(),
         "[TableName] [priKey] [Key]:[Value],...,[Key]:[Value]")(
         "remove,r", po::value<vector<string>>()->multitoken(), "[TableName] [priKey]")(
-        "encrypt,e", po::value<vector<string>>()->multitoken(), "[encryptKey] [SMCrypto]");
+        "encrypt,e", po::value<vector<string>>()->multitoken(), "[encryptKey] [SMCrypto]")(
         "diff,d", po::value<vector<string>>()->multitoken(), "[db1 path] [db2 path]")(
         "list,l", po::value<vector<string>>()->multitoken(), "[db path] [table]");
     po::variables_map vm;
@@ -278,24 +278,24 @@ bool valueDiff(
 
     if (print)
     {
-        outfile << "\t------extra entries in key1------" << endl;
+        outfile << "\t------extra entries in db1------" << endl;
         for (auto entry : extraEntries1)
         {
             outfile << "\t\t" << entry << endl;
         }
-        outfile << "\t------extra entries in key2------" << endl;
+        outfile << "\t------extra entries in db2------" << endl;
         for (auto entry : extraEntries2)
         {
             outfile << "\t\t" << entry << endl;
         }
 
         /*
-        outfile << "\t------entries in key1------" << endl;
+        outfile << "\t------entries in db1------" << endl;
         for (auto entry : entries1)
         {
             outfile << entry << endl;
         }
-        outfile << "\t ------entries in key2------" << endl;
+        outfile << "\t ------entries in db2------" << endl;
         for (auto entry : entries2)
         {
             outfile << entry << endl;
@@ -422,8 +422,9 @@ void dbDiff(vector<string> const& paths)
                 valueDiff(outfile, it1->key().ToString(), it1->value().ToString(),
                     it2->value().ToString(), false))
             {
-                // Invalid diff : the block contents are inconsistent due to the signature list
-                if (it1->key().ToString().find(SYS_HASH_2_BLOCK) == string::npos)
+                // Invalid diff : the block/blockHeader contents are inconsistent due to the signature list
+                if (it1->key().ToString().find(SYS_HASH_2_BLOCK) == string::npos && 
+                    it1->key().ToString().find(SYS_HASH_2_BLOCKHEADER) == string::npos)
                 {
                     outfile << "key : " << it1->key().ToString() << endl;
                     valueDiff(outfile, it1->key().ToString(), it1->value().ToString(),
