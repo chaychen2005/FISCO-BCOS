@@ -310,7 +310,24 @@ void syncData(SQLStorage::Ptr _reader, Storage::Ptr _writer, int64_t _blockNumbe
             }
             auto lastEntry = tableData->newEntries->get(tableData->newEntries->size() - 1);
             start = lastEntry->getID();
-            _writer->commit(syncBlock, vector<TableData::Ptr>{tableData});
+            map<int64_t, TableData::Ptr> m;
+            for (size_t i = 0; i < tableData->newEntries->size(); i++)
+            {
+                auto entry = tableData->newEntries->get(i);
+                int64_t num = entry->num();
+                if (m.find(num) == m.end())
+                {
+                    auto t = std::make_shared<TableData>();
+                    t->info = tableData->info;
+                    m[num] = t;
+                }
+                m[num]->newEntries->addEntry(entry);
+            }
+            for (auto iter = m.begin(); iter != m.end(); iter++)
+            {
+                _writer->commit(iter->first, vector<TableData::Ptr>{iter->second});
+            }
+            // _writer->commit(syncBlock, vector<TableData::Ptr>{tableData});
             recorder->markStatus(tableInfo->name, make_pair(start, false));
             downloaded += tableData->newEntries->size();
             cout << "\r[" << getCurrentDateTime() << "][" << syncedCount << "/" << totalTable
@@ -467,7 +484,7 @@ int main(int argc, const char* argv[])
         boost::program_options::value<std::string>()->default_value("./config.ini"),
         "config file path, eg. config.ini")("verify,v",
         boost::program_options::value<int64_t>()->default_value(1000),
-        "verify number of blocks, minimum is 100")("limit,l",
+        "verify number of blocks, minimum is 0, 0 means get the highest block")("limit,l",
         boost::program_options::value<uint32_t>()->default_value(10000), "page counts of table")(
         "sys_limit,s", boost::program_options::value<uint32_t>()->default_value(50),
         "page counts of system table")(
@@ -490,7 +507,7 @@ int main(int argc, const char* argv[])
         exit(0);
     }
     int64_t verifyBlocks = vm["verify"].as<int64_t>();
-    verifyBlocks = verifyBlocks < 100 ? 100 : verifyBlocks;
+    verifyBlocks = verifyBlocks < 0 ? 0 : verifyBlocks;
     PageCount = vm["limit"].as<uint32_t>();
     BigTablePageCount = vm["sys_limit"].as<uint32_t>();
     string configPath = vm["config"].as<std::string>();
